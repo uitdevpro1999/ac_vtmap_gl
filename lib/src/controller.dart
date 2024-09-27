@@ -866,7 +866,7 @@ class MapboxMapController extends ChangeNotifier {
     args["wayPoints"] = wayPointMap;
 
     // _routeEventSubscription = _streamRouteEvent.listen(_onProgressData);
-    return await MapboxGlPlatform.getInstance(_id)!.buildRoute(args);
+    return await MapboxGlPlatform.getInstance(Random().nextInt(100))!.buildRoute(args);
     // return await _methodChannel
     //     .invokeMethod('buildRoute', args)
     //     .then<bool>((dynamic result) => result);
@@ -875,14 +875,10 @@ class MapboxMapController extends ChangeNotifier {
   Future startNavigation(
       {required List<WayPoint> wayPoints,
       required VTMapOptions options}) async {
-    assert(wayPoints != null);
     assert(wayPoints.length > 1);
-
-    List<Map<String, dynamic?>> pointList = <Map<String, dynamic>>[];
-
+    List<Map<String, dynamic>> pointList = <Map<String, dynamic>>[];
     for (int i = 0; i < wayPoints.length; i++) {
       var wayPoint = wayPoints[i];
-      assert(wayPoint != null);
       assert(wayPoint.name != null);
       assert(wayPoint.latitude != null);
       assert(wayPoint.longitude != null);
