@@ -866,7 +866,7 @@ class MapboxMapController extends ChangeNotifier {
     args["wayPoints"] = wayPointMap;
 
     // _routeEventSubscription = _streamRouteEvent.listen(_onProgressData);
-    return await MapboxGlPlatform.getInstance(Random().nextInt(100))!.buildRoute(args);
+    return await MapboxGlPlatform.getInstance(_id)!.buildRoute(args);
     // return await _methodChannel
     //     .invokeMethod('buildRoute', args)
     //     .then<bool>((dynamic result) => result);
