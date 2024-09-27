@@ -1,65 +1,76 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-package com.mapbox.mapboxgl;
-
 import android.app.Activity;
-import android.app.Application;
 import android.os.Bundle;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
-/**
- * Plugin for controlling a set of MapboxMap views to be shown as overlays on top of the Flutter
- * view. The overlay should be hidden during transformations or while Flutter is rendering on top of
- * the map. A Texture drawn using MapboxMap bitmap snapshots can then be shown instead of the
- * overlay.
- */
-public class MapboxMapsPlugin implements Application.ActivityLifecycleCallbacks {
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class MapboxMapsPlugin implements FlutterPlugin, ActivityAware, Application.ActivityLifecycleCallbacks {
+  // State constants
   static final int CREATED = 1;
   static final int STARTED = 2;
   static final int RESUMED = 3;
   static final int PAUSED = 4;
   static final int STOPPED = 5;
   static final int DESTROYED = 6;
+
   private final AtomicInteger state = new AtomicInteger(0);
-  private final int registrarActivityHashCode;
+  private MethodChannel methodChannel;
+  private ActivityPluginBinding activityBinding;
 
+  // For API v1
   public static void registerWith(Registrar registrar) {
-    if (registrar.activity() == null) {
-      // When a background flutter view tries to register the plugin, the registrar has no activity.
-      // We stop the registration process as this plugin is foreground only.
-      return;
-    }
-    final MapboxMapsPlugin plugin = new MapboxMapsPlugin(registrar);
+    MapboxMapsPlugin plugin = new MapboxMapsPlugin();
     registrar.activity().getApplication().registerActivityLifecycleCallbacks(plugin);
-    registrar
-      .platformViewRegistry()
-      .registerViewFactory(
-        "plugins.flutter.io/mapbox_gl", new MapboxMapFactory(plugin.state, registrar));
+    plugin.methodChannel = new MethodChannel(registrar.messenger(), "plugins.flutter.io/mapbox_gl");
+    plugin.methodChannel.setMethodCallHandler(new GlobalMethodHandler());
+    registrar.platformViewRegistry().registerViewFactory("plugins.flutter.io/mapbox_gl", new MapboxMapFactory(plugin.state, registrar));
+  }
 
-    MethodChannel methodChannel =
-            new MethodChannel(registrar.messenger(), "plugins.flutter.io/mapbox_gl");
-    methodChannel.setMethodCallHandler(new GlobalMethodHandler(registrar));
+  @Override
+  public void onAttachedToEngine(FlutterPlugin.FlutterPluginBinding binding) {
+    methodChannel = new MethodChannel(binding.getBinaryMessenger(), "plugins.flutter.io/mapbox_gl");
+    methodChannel.setMethodCallHandler(new GlobalMethodHandler());
+    binding.getPlatformViewRegistry().registerViewFactory("plugins.flutter.io/mapbox_gl", new MapboxMapFactory(state, null));
+  }
+
+  @Override
+  public void onDetachedFromEngine(FlutterPlugin.FlutterPluginBinding binding) {
+    methodChannel.setMethodCallHandler(null);
+  }
+
+  @Override
+  public void onAttachedToActivity(ActivityPluginBinding binding) {
+    this.activityBinding = binding;
+    binding.addActivityResultListener(new GlobalMethodHandler()); // Đảm bảo thêm listener nếu cần
+  }
+
+  @Override
+  public void onDetachedFromActivityForConfigChanges() {
+    // Handle configuration changes if necessary
+  }
+
+  @Override
+  public void onReattachedToActivityForConfigChanges(ActivityPluginBinding binding) {
+    this.activityBinding = binding;
+  }
+
+  @Override
+  public void onDetachedFromActivity() {
+    activityBinding = null;
   }
 
   @Override
   public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
-    if (activity.hashCode() != registrarActivityHashCode) {
-      return;
-    }
     state.set(CREATED);
   }
 
   @Override
   public void onActivityStarted(Activity activity) {
-    if (activity.hashCode() != registrarActivityHashCode) {
-      return;
-    }
     state.set(STARTED);
   }
 
@@ -88,8 +99,7 @@ public class MapboxMapsPlugin implements Application.ActivityLifecycleCallbacks 
   }
 
   @Override
-  public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
-  }
+  public void onActivitySaveInstanceState(Activity activity, Bundle outState) {}
 
   @Override
   public void onActivityDestroyed(Activity activity) {
