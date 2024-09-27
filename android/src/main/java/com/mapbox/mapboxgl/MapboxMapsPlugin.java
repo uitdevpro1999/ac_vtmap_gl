@@ -24,7 +24,7 @@ public class MapboxMapsPlugin implements FlutterPlugin, ActivityAware, Applicati
 
   // For API v1
   public static void registerWith(Registrar registrar) {
-    MapboxMapsPlugin plugin = new MapboxMapsPlugin();
+    MapboxMapsPlugin plugin = new MapboxMapsPlugin(registrar);
     registrar.activity().getApplication().registerActivityLifecycleCallbacks(plugin);
     plugin.methodChannel = new MethodChannel(registrar.messenger(), "plugins.flutter.io/mapbox_gl");
     plugin.methodChannel.setMethodCallHandler(new GlobalMethodHandler());
